@@ -1,0 +1,6 @@
+[submodule "BuehlerVAE"]
+	path = BuehlerVAE
+	url = https://github.com/reutep/BuehlerVAE
+[submodule "LiaoWGAN"]
+	path = LiaoWGAN
+	url = https://github.com/reutep/LiaoWGAN
