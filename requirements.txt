@@ -1,2 +1,7 @@
 numpy
 pandas
+matplotlib
+# tqdm # for progress bars
+# torch # PyTorch ML library
+# signatory # GPU optimized and set up for implementation with PyTorch
+# esig # not built for ML integration
