@@ -80,8 +80,8 @@ class DataLoader:
         - sigma: Volatility
         - lambda_: Jump intensity
         - p: Probability of positive jump
-        - eta1: Rate of positive exponential distribution
-        - eta2: Rate of negative exponential distribution
+        - eta1: Rate of positive jump's exponential distribution
+        - eta2: Rate of negative jump's exponential distribution
         - T: Time horizon
         - dt: Time step size
         - n: Number of paths to simulate
@@ -94,58 +94,65 @@ class DataLoader:
 
         # Jump component
         dv = np.ones((n, len(t)))
-        N = np.random.poisson(lambda_*dt, size=(n, len(t)-1))
-
-        # TODO: make more efficient and check logic again
+        # increments of Poisson process
+        dN = np.random.poisson(lambda_*dt, size=(n, len(t)-1))
+        # TODO: (optional) Make this computation more efficient
         for i in range(n):
             for j in range(1, len(t)):
                 # iterate through number of jumps
-                vi = np.ones(N[i, j-1])
-                for k in range(N[i, j-1]):
+                # vi contains all jumps that happen in one increment
+                vi = np.ones(dN[i, j-1])
+                for k in range(dN[i, j-1]):
+                    # loop over all jumps in one time step
                     gamma = np.random.exponential(1/eta1) if np.random.rand() < p else -np.random.exponential(1/eta2)
                     vi[k] = np.exp(gamma)
+                # accumulate all jumps which happen in one timestep (1 if empty)
                 dv[i, j] = np.prod(vi)
 
         # Calculate the paths with jumps
         S = gbm * np.cumprod(dv, axis=1) 
         return S, t
 
+
 ##### debug / test #####
-kou_params = {
-    "S0": 1., 
-    "mu": 0.1, 
-    "sigma": 0.16, 
-    "lambda_": 1.0, 
-    "p": 0.5, 
-    "eta1": 10., 
-    "eta2": 5., 
-    "T": 1., 
-    "dt": 0.001, 
-    "n": 100
-}
-gbm_params = {
-    "S0": 1., 
-    "mu": 0.05,
-    "sigma": 0.2, 
-    "T": 10., 
-    "dt": 0.001, 
-    "n": 1000
-}
-brownian_motion_params = {
-    "T": 10., 
-    "dt": 0.001, 
-    "n": 1000
-}
-loader = DataLoader(params=kou_params)
-prices, times = loader.create_dataset("Kou_Jump_Diffusion")
+if __name__ == "__main__":
+    kou_params = {
+        "S0": 1., 
+        "mu": 0.05, 
+        "sigma": 0.16, 
+        "lambda_": 1.0, 
+        "p": 0.4, 
+        "eta1": 10., 
+        "eta2": 5., 
+        "T": 5., 
+        "dt": 0.004, 
+        "n": 1000
+    }
+    gbm_params = {
+        "S0": 1., 
+        "mu": 0.05,
+        "sigma": 0.2, 
+        "T": 5., 
+        "dt": 0.004, 
+        "n": 1000
+    }
+    brownian_motion_params = {
+        "T": 10., 
+        "dt": 0.001, 
+        "n": 1000
+    }
+    loader = DataLoader(params=gbm_params)
+    prices, times = loader.create_dataset("GBM")
 
-# Plotting the paths
-plt.figure(figsize=(18, 10))
-for i in range(prices.shape[0]):
-    plt.plot(times, prices[i], linewidth=0.1, alpha=0.4, color='blue')  # Reduced linewidth and added transparency
+    # Plotting the paths
+    plt.figure(figsize=(18, 10))
+    for i in range(prices.shape[0]):
+        # plt.plot(times, prices[i], alpha=1)  # for <= 50 paths
+        plt.plot(times, prices[i], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
+        # plt.plot(times, prices[i], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
 
-plt.title('Simulated Paths')
-plt.xlabel('Time (Years)')
-plt.ylabel('Price')
-plt.grid(True)
-plt.show()
+    plt.title('Simulated Paths')
+    plt.xlabel('Time (Years)')
+    plt.ylabel('Price')
+    plt.grid(True)
+    plt.show()
