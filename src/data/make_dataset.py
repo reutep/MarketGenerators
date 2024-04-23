@@ -6,19 +6,25 @@ import matplotlib.pyplot as plt
 ################################
 
 class DataLoader:
-    def __init__(self, params: dict[str, float | int]):
-        self.params = params
+    def __init__(self, method: str, params: dict[str, float | int], seed: int = None):
         self.method_functions = {
             "Brownian_Motion": self.simulate_brownian_motion,
             "GBM": self.simulate_geometric_brownian_motion,
             "Kou_Jump_Diffusion": self.simulate_kou_jump_diffusion
         }
+        self.method = method
+        self.params = params
+        self.seed = seed
 
-    def create_dataset(self, method: str) -> tuple[NDArray, NDArray]:
-        if method in self.method_functions:
-            return self.method_functions[method](**self.params)
+    def create_dataset(self) -> tuple[NDArray, NDArray]:
+        if self.method in self.method_functions:
+            np.random.seed(self.seed)
+            return self.method_functions[self.method](**self.params)
         else:
-            raise ValueError(f"Data creation method '{method}' not implemented.")
+            raise ValueError(
+                f'\nData creation method "{self.method}" currently not implemented. ' +
+                f'Choose from "{'", "'.join(self.method_functions.keys())}".'
+            )
         
     def simulate_brownian_motion(self, T: float, dt: float, n: int) -> tuple[NDArray, NDArray]:
         """
@@ -34,7 +40,7 @@ class DataLoader:
         - A NumPy array of time steps
         """
         num_steps = int(T / dt)
-        t = np.linspace(0, T, num_steps + 1)
+        t = np.linspace(0, T, num_steps+1)
         dW = np.random.normal(size=(n, num_steps))  # scaled increments
         W = np.cumsum(np.sqrt(dt)*dW, axis=1)  # cumulative sum to generate paths
         W = np.hstack([np.zeros((n, 1)), W])  # Including zero at the start for the initial condition
@@ -116,14 +122,7 @@ class DataLoader:
 
 ##### debug / test #####
 if __name__ == "__main__":
-    kou_params = {
-        "S0": 1., 
-        "mu": 0.05, 
-        "sigma": 0.16, 
-        "lambda_": 1.0, 
-        "p": 0.4, 
-        "eta1": 10., 
-        "eta2": 5., 
+    brownian_motion_params = {
         "T": 5., 
         "dt": 0.004, 
         "n": 1000
@@ -136,13 +135,22 @@ if __name__ == "__main__":
         "dt": 0.004, 
         "n": 1000
     }
-    brownian_motion_params = {
-        "T": 10., 
-        "dt": 0.001, 
+    kou_params = {
+        "S0": 1., 
+        "mu": 0.05, 
+        "sigma": 0.16, 
+        "lambda_": 1.0, 
+        "p": 0.4, 
+        "eta1": 10., 
+        "eta2": 5., 
+        "T": 5., 
+        "dt": 0.004, 
         "n": 1000
     }
-    loader = DataLoader(params=gbm_params)
-    prices, times = loader.create_dataset("GBM")
+    bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
+    gbm_loader = DataLoader(method="GBM", params=gbm_params)
+    kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
+    prices, times = kou_loader.create_dataset()
 
     # Plotting the paths
     plt.figure(figsize=(18, 10))
