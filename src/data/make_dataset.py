@@ -1,8 +1,11 @@
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
+
 
 ##### remove later ############
 import matplotlib.pyplot as plt
+from ..features import encoder
 ################################
 
 class DataLoader:
@@ -16,10 +19,13 @@ class DataLoader:
         self.params = params
         self.seed = seed
 
-    def create_dataset(self) -> tuple[NDArray, NDArray]:
+    def create_dataset(self) -> pd.DataFrame:
         if self.method in self.method_functions:
             np.random.seed(self.seed)
-            return self.method_functions[self.method](**self.params)
+            paths, time = self.method_functions[self.method](**self.params)
+            # Transform the data so that each time step is a row and each path is a column
+            paths_df = pd.DataFrame(paths.T, index=time)
+            return paths_df
         else:
             raise ValueError(
                 f'\nData creation method "{self.method}" currently not implemented. ' +
@@ -150,17 +156,19 @@ if __name__ == "__main__":
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
     gbm_loader = DataLoader(method="GBM", params=gbm_params)
     kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-    prices, times = kou_loader.create_dataset()
+    prices_df = gbm_loader.create_dataset()
 
-    # Plotting the paths
+    test = encoder.Transformer(prices_df)
+
+    # Assuming df_times_as_index is the DataFrame with times as row indices
     plt.figure(figsize=(18, 10))
-    for i in range(prices.shape[0]):
-        # plt.plot(times, prices[i], alpha=1)  # for <= 50 paths
-        plt.plot(times, prices[i], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
-        # plt.plot(times, prices[i], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
+    for column in prices_df.columns:
+        # plt.plot(prices_df.index, prices_df[column], alpha=1)  # for <= 50 paths
+        plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
+        # plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
 
-    plt.title('Simulated Paths')
-    plt.xlabel('Time (Years)')
+    plt.title('Simulated Paths over Time')
+    plt.xlabel('Time')
     plt.ylabel('Price')
     plt.grid(True)
     plt.show()
