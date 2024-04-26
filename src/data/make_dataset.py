@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 
 ##### remove later ############
 import matplotlib.pyplot as plt
-from ..features import encoder
+from ..features import data_transformer
 ################################
 
 class DataLoader:
@@ -19,16 +19,20 @@ class DataLoader:
         self.params = params
         self.seed = seed
 
-    def create_dataset(self) -> pd.DataFrame:
+    def create_dataset(self, output_type: str = "DataFrame") -> pd.DataFrame | tuple[NDArray, NDArray]:
         if self.method in self.method_functions:
             np.random.seed(self.seed)
             paths, time = self.method_functions[self.method](**self.params)
             # Transform the data so that each time step is a row and each path is a column
-            paths_df = pd.DataFrame(paths.T, index=time)
-            return paths_df
+            if output_type == "np.ndarray":
+                return paths, time
+            elif output_type == "DataFrame":
+                return pd.DataFrame(paths.T, index=time)
+            else:
+                raise ValueError(f'{output_type = } not implemented.')
         else:
             raise ValueError(
-                f'\nData creation method "{self.method}" currently not implemented. ' +
+                f'Data creation method "{self.method}" currently not implemented. ' +
                 f'Choose from "{'", "'.join(self.method_functions.keys())}".'
             )
         
@@ -156,9 +160,9 @@ if __name__ == "__main__":
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
     gbm_loader = DataLoader(method="GBM", params=gbm_params)
     kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-    prices_df = gbm_loader.create_dataset()
+    prices_df = gbm_loader.create_dataset(output_type="DataFrame")
 
-    test = encoder.Transformer(prices_df)
+    test = data_transformer.Transformer(prices_df)
 
     # Assuming df_times_as_index is the DataFrame with times as row indices
     plt.figure(figsize=(18, 10))

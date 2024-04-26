@@ -1,7 +1,7 @@
 # to test, run:
 # python -m src.market_generation.market_generator
 from ..data.make_dataset import DataLoader
-from ..features.encoder import Encoder
+from ..features.data_transformer import Encoder
 from ..features.decoder import Decoder
 
 class MarketGenerator:
@@ -13,7 +13,7 @@ class MarketGenerator:
 
     def load_data(self):
         # output format to be adjusted
-        data, times = self.data_loader.create_dataset()
+        data, times = self.data_loader.create_dataset(output_type="np.ndarray")
         return data, times
 
     def transform_data(self, data):

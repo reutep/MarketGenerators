@@ -1,8 +1,9 @@
 # .\.venv\Scripts\activate 
-from src.features import encoder 
+from src.features import data_transformer 
 from src.data import make_dataset
 import numpy as np
 import pandas as pd
+from esig import tosig as ts
 
 brownian_motion_params = {
     "T": 5., 
@@ -32,11 +33,14 @@ kou_params = {
 bm_loader = make_dataset.DataLoader(method="Brownian_Motion", params=brownian_motion_params)
 gbm_loader = make_dataset.DataLoader(method="GBM", params=gbm_params)
 kou_loader = make_dataset.DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-prices_df = gbm_loader.create_dataset()
+prices, time = kou_loader.create_dataset(output_type="np.ndarray")
+prices_df = kou_loader.create_dataset(output_type="DataFrame")
 
-transformer = encoder.Transformer(prices_df)
-pct_returns = transformer.calculate_daily_rolling_returns(5)
-log_returns = transformer.calculate_daily_rolling_log_returns(5)
-log_returns_reduced = transformer.calculate_returns(shift=5, logFlag=True)
-pct_returns_reduced = transformer.calculate_returns(shift=5, logFlag=False)
+transformer = data_transformer.Transformer(paths_df=prices_df, paths=prices, time=time)
+signatures = transformer.calculate_signature(depth=5, type="normal")
+log_signatures = transformer.calculate_signature(depth=5, type="log")
+pct_returns = transformer.calculate_daily_rolling_returns_df(5)
+log_returns = transformer.calculate_daily_rolling_log_returns_df(5)
+log_returns_reduced = transformer.calculate_returns_df(shift=5, logFlag=True)
+pct_returns_reduced = transformer.calculate_returns_df(shift=5, logFlag=False)
 print("####")
