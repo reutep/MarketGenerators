@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+# needed for Python 3.7 and below
+from typing import Union, Tuple, Dict
 from numpy.typing import NDArray
 
 
@@ -9,7 +11,7 @@ from ..features import data_transformer
 ################################
 
 class DataLoader:
-    def __init__(self, method: str, params: dict[str, float | int], seed: int = None):
+    def __init__(self, method: str, params: Dict[str, Union[float, int]], seed: int = None):
         self.method_functions = {
             "Brownian_Motion": self.simulate_brownian_motion,
             "GBM": self.simulate_geometric_brownian_motion,
@@ -19,7 +21,7 @@ class DataLoader:
         self.params = params
         self.seed = seed
 
-    def create_dataset(self, output_type: str = "DataFrame") -> pd.DataFrame | tuple[NDArray, NDArray]:
+    def create_dataset(self, output_type: str = "DataFrame") -> Union[pd.DataFrame, Tuple[NDArray, NDArray]]:
         if self.method in self.method_functions:
             np.random.seed(self.seed)
             paths, time = self.method_functions[self.method](**self.params)
@@ -29,14 +31,14 @@ class DataLoader:
             elif output_type == "DataFrame":
                 return pd.DataFrame(paths.T, index=time)
             else:
-                raise ValueError(f'{output_type = } not implemented.')
+                raise ValueError(f'output_type={output_type} not implemented.')
         else:
             raise ValueError(
                 f'Data creation method "{self.method}" currently not implemented. ' +
                 f'Choose from "{'", "'.join(self.method_functions.keys())}".'
             )
         
-    def simulate_brownian_motion(self, T: float, dt: float, n: int) -> tuple[NDArray, NDArray]:
+    def simulate_brownian_motion(self, T: float, dt: float, n: int) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of scaled Brownian motion.
 
@@ -59,7 +61,7 @@ class DataLoader:
 
     def simulate_geometric_brownian_motion(
             self, S0: float, mu: float, sigma: float, T: float, dt: float, n: int
-            ) -> tuple[NDArray, NDArray]:
+            ) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of the Black-Scholes process, each starting at S0.
 
@@ -86,7 +88,7 @@ class DataLoader:
     
     def simulate_kou_jump_diffusion(
             self, S0: float, mu: float, sigma: float, lambda_: float, p: float, eta1: float, eta2: float, 
-            T: float, dt: float, n: int) -> tuple[NDArray, NDArray]:
+            T: float, dt: float, n: int) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of the Kou jump-diffusion process, each starting at S0.
 

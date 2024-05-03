@@ -1,3 +1,5 @@
 .venv/
+.venv2/
 settings.json
 __pycache__
+*.pyc

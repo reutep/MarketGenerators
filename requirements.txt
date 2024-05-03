@@ -2,7 +2,15 @@ numpy
 pandas
 matplotlib
 esig
-# tqdm # for progress bars
+scikit-learn
+ipykernel
+tqdm # for progress bars
+datasets # Bühler et al. uses this
+tensorflow==1.15
 # torch # PyTorch ML library
 # signatory # GPU optimized and set up for implementation with PyTorch
-# esig # not built for ML integration
+
+protobuf==3.20.1 # for tensorflow
+pandas_datareader # for downloading data
+# torch # PyTorch ML library
+# signatory # GPU optimized and set up for implementation with PyTorch
