@@ -5,11 +5,6 @@ from typing import Union, Tuple, Dict
 from numpy.typing import NDArray
 
 
-##### remove later ############
-import matplotlib.pyplot as plt
-from ..features import data_transformer
-################################
-
 class DataLoader:
     def __init__(self, method: str, params: Dict[str, Union[float, int]], seed: int = None):
         self.method_functions = {
@@ -27,16 +22,19 @@ class DataLoader:
             paths, time = self.method_functions[self.method](**self.params)
             # Transform the data so that each time step is a row and each path is a column
             if output_type == "np.ndarray":
-                return paths, time
+                return paths.T, time
             elif output_type == "DataFrame":
                 return pd.DataFrame(paths.T, index=time)
             else:
                 raise ValueError(f'output_type={output_type} not implemented.')
         else:
+            method_list = "', '".join(self.method_functions.keys())
+
             raise ValueError(
                 f'Data creation method "{self.method}" currently not implemented. ' +
-                f'Choose from "{'", "'.join(self.method_functions.keys())}".'
+                f'Choose from "{method_list}".'
             )
+
         
     def simulate_brownian_motion(self, T: float, dt: float, n: int) -> Tuple[NDArray, NDArray]:
         """
@@ -126,14 +124,16 @@ class DataLoader:
                     vi[k] = np.exp(gamma)
                 # accumulate all jumps which happen in one timestep (1 if empty)
                 dv[i, j] = np.prod(vi)
-
         # Calculate the paths with jumps
         S = gbm * np.cumprod(dv, axis=1) 
         return S, t
 
 
 ##### debug / test #####
-if __name__ == "__main__":
+if __name__ == "__main__": 
+    import matplotlib.pyplot as plt
+    from src.features.data_transformer import Transformer
+
     brownian_motion_params = {
         "T": 5., 
         "dt": 0.004, 
@@ -149,32 +149,33 @@ if __name__ == "__main__":
     }
     kou_params = {
         "S0": 1., 
-        "mu": 0.05, 
-        "sigma": 0.16, 
-        "lambda_": 1.0, 
-        "p": 0.4, 
-        "eta1": 10., 
-        "eta2": 5., 
-        "T": 5., 
-        "dt": 0.004, 
+        "mu": 0.12, 
+        "sigma": 0.2, 
+        "lambda_": 2.0, 
+        "p": 0.3, 
+        "eta1": 50., 
+        "eta2": 25., 
+        "T": 10., 
+        "dt": 1/250, 
         "n": 1000
     }
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
     gbm_loader = DataLoader(method="GBM", params=gbm_params)
     kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-    prices_df = gbm_loader.create_dataset(output_type="DataFrame")
+    prices_df = kou_loader.create_dataset(output_type="DataFrame")
 
-    test = data_transformer.Transformer(prices_df)
+    test = Transformer(prices_df)
 
     # Assuming df_times_as_index is the DataFrame with times as row indices
     plt.figure(figsize=(18, 10))
     for column in prices_df.columns:
         # plt.plot(prices_df.index, prices_df[column], alpha=1)  # for <= 50 paths
-        plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
-        # plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
+        # plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
+        plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
 
     plt.title('Simulated Paths over Time')
     plt.xlabel('Time')
     plt.ylabel('Price')
+    plt.ylim(0, 4)
     plt.grid(True)
     plt.show()

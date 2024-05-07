@@ -7,10 +7,16 @@ ipykernel
 tqdm # for progress bars
 datasets # Bühler et al. uses this
 tensorflow==1.15
-# torch # PyTorch ML library
-# signatory # GPU optimized and set up for implementation with PyTorch
 
 protobuf==3.20.1 # for tensorflow
 pandas_datareader # for downloading data
-# torch # PyTorch ML library
-# signatory # GPU optimized and set up for implementation with PyTorch
+
+# Pytorch version for signatory:
+# cuda-python # for GPU acceleration (required for pytorch)
+--find-links https://download.pytorch.org/whl/torch_stable.html
+# adjust to your specific CUDA version
+torch==1.7.1+cu101
+torchvision==0.8.2+cu101
+torchaudio==0.7.2
+
+signatory==1.2.6.1.7.1 # signature package from Lyons et al. 

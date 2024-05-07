@@ -2,13 +2,15 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from esig import tosig as ts
+import torch
 
 # encoder transforms data frame time series
 class Transformer:
-    def __init__(self, paths_df: pd.DataFrame = None, paths: NDArray = None, time: NDArray = None):
+    def __init__(self, paths_df: pd.DataFrame = None, paths: NDArray = None, time: NDArray = None, paths_torch_tensor: torch.Tensor = None):
         self.paths_df = paths_df
         self.paths = paths
         self.time = time
+        self.paths_torch_tensor = paths_torch_tensor
 
     def calculate_returns_df(self, shift: int, logFlag: bool) -> pd.DataFrame:
         """
@@ -33,6 +35,19 @@ class Transformer:
             returns_df = reduced_df.pct_change()
         
         return returns_df
+    
+    def arrays_to_torch_tensor(self, times: NDArray, paths: NDArray):
+        times_reshaped = times.reshape(-1, 1)
+        paths_tensor_format = np.stack([np.tile(times_reshaped, (1, paths.shape[1])), paths], axis=2)
+        paths_tensor_format = np.transpose(paths_tensor_format, axes=(1, 0, 2))
+        paths_torch = torch.from_numpy(paths_tensor_format)
+        return paths_torch
+    
+    def torch_tensor_to_arrays(self, paths_torch: torch.Tensor):
+        paths_tensor_format = paths_torch.permute(1, 0, 2)
+        times = paths_tensor_format[:, 0, 0].numpy()
+        paths = paths_tensor_format[:, :, 1].numpy()
+        return times, paths
 
     def calculate_daily_rolling_returns_df(self, shift: int):
         return self.paths_df.pct_change(periods = shift)
@@ -52,7 +67,7 @@ class Transformer:
         if self.time is None or self.paths is None:
             raise ValueError('Both numpy arrays `time` and `paths` must be provided for signature calculation.')
         if type not in ("log", "normal"):
-            raise ValueError(f'{type = } is not a valid argument for signature calculation. Must be "normal" or "log".')
+            raise ValueError(f'{type} is not a valid argument for signature calculation. Must be "normal" or "log".')
 
         # Apply wrapper to all rows of self.paths along with self.time
         # Each row of the output will correspond to the (log-)signature of one path
