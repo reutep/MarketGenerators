@@ -11,6 +11,8 @@ tensorflow==1.15
 protobuf==3.20.1 # for tensorflow
 pandas_datareader # for downloading data
 
+fbm # for fractional Brownian motion
+
 # Pytorch version for signatory:
 # cuda-python # for GPU acceleration (required for pytorch)
 --find-links https://download.pytorch.org/whl/torch_stable.html

@@ -3,12 +3,13 @@ import pandas as pd
 # needed for Python 3.7 and below
 from typing import Union, Tuple, Dict
 from numpy.typing import NDArray
-
-
+# fractional brownian motion
+from fbm import FBM
 class DataLoader:
     def __init__(self, method: str, params: Dict[str, Union[float, int]], seed: int = None):
         self.method_functions = {
             "Brownian_Motion": self.simulate_brownian_motion,
+            "Fractional_BM": self.simulate_fractional_brownian_motion,
             "GBM": self.simulate_geometric_brownian_motion,
             "Kou_Jump_Diffusion": self.simulate_kou_jump_diffusion
         }
@@ -54,6 +55,27 @@ class DataLoader:
         dW = np.random.normal(size=(n, num_steps))  # scaled increments
         W = np.cumsum(np.sqrt(dt)*dW, axis=1)  # cumulative sum to generate paths
         W = np.hstack([np.zeros((n, 1)), W])  # Including zero at the start for the initial condition
+
+        return W, t
+    
+    def simulate_fractional_brownian_motion(self, T: float, dt: float, n: int, hurst: float) -> Tuple[NDArray, NDArray]:
+        """
+        Simulate n paths of fractional Brownian motion.
+
+        Parameters:
+        - T: Time horizon
+        - dt: Time step size
+        - n: Number of paths to simulate
+        - hurst: Hurst parameter
+
+        Returns:
+        - A NumPy array of simulated fractional Brownian motion paths, shape (n, num_steps+1)
+        - A NumPy array of time steps
+        """
+        num_steps = int(T / dt)
+        f = FBM(n=num_steps, hurst=hurst, length=T, method="daviesharte")
+        W = np.array([f.fbm() for _ in range(n)])
+        t = f.times()
 
         return W, t
 
@@ -138,6 +160,12 @@ if __name__ == "__main__":
         "T": 5., 
         "dt": 0.004, 
         "n": 1000
+    }
+    fractional_bm_params = {
+        "T": 1., 
+        "dt": 0.004, 
+        "n": 1000, 
+        "hurst": 0.75
     }
     gbm_params = {
         "S0": 1., 
