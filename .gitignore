@@ -4,3 +4,4 @@ settings.json
 __pycache__
 *.pyc
 csv_export/
+plots/

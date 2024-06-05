@@ -25,7 +25,7 @@ class DataLoader:
             if output_type == "np.ndarray":
                 return paths.T, time
             elif output_type == "DataFrame":
-                return pd.DataFrame(paths.T, index=time)
+                return pd.DataFrame(paths, columns=time)
             else:
                 raise ValueError(f'output_type={output_type} not implemented.')
         else:
@@ -37,50 +37,49 @@ class DataLoader:
             )
 
         
-    def simulate_brownian_motion(self, T: float, dt: float, n: int) -> Tuple[NDArray, NDArray]:
+    def simulate_brownian_motion(self, T: float, n_points: float, n: int) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of scaled Brownian motion.
 
         Parameters:
         - T: Time horizon
-        - dt: Time step size
+        - n_points: Number of points in the time grid (including initial point)
         - n: Number of paths to simulate
 
         Returns:
-        - A NumPy array of simulated scaled Brownian motion paths, shape (n, num_steps+1)
+        - A NumPy array of simulated scaled Brownian motion paths, shape (n, n_points)
         - A NumPy array of time steps
         """
-        num_steps = int(T / dt)
-        t = np.linspace(0, T, num_steps+1)
-        dW = np.random.normal(size=(n, num_steps))  # scaled increments
+        t = np.linspace(0, T, n_points)
+        dt = T / (n_points - 1)
+        dW = np.random.normal(size=(n, n_points-1))  # increments
         W = np.cumsum(np.sqrt(dt)*dW, axis=1)  # cumulative sum to generate paths
         W = np.hstack([np.zeros((n, 1)), W])  # Including zero at the start for the initial condition
 
         return W, t
     
-    def simulate_fractional_brownian_motion(self, T: float, dt: float, n: int, hurst: float) -> Tuple[NDArray, NDArray]:
+    def simulate_fractional_brownian_motion(self, T: float, n_points: float, n: int, hurst: float) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of fractional Brownian motion.
 
         Parameters:
         - T: Time horizon
-        - dt: Time step size
+        - n_points: Number of points in the time grid (including initial point)
         - n: Number of paths to simulate
         - hurst: Hurst parameter
 
         Returns:
-        - A NumPy array of simulated fractional Brownian motion paths, shape (n, num_steps+1)
+        - A NumPy array of simulated fractional Brownian motion paths, shape (n, n_points)
         - A NumPy array of time steps
         """
-        num_steps = int(T / dt)
-        f = FBM(n=num_steps, hurst=hurst, length=T, method="daviesharte")
+        f = FBM(n=n_points-1, hurst=hurst, length=T, method="daviesharte")
         W = np.array([f.fbm() for _ in range(n)])
         t = f.times()
 
         return W, t
 
     def simulate_geometric_brownian_motion(
-            self, S0: float, mu: float, sigma: float, T: float, dt: float, n: int
+            self, S0: float, mu: float, sigma: float, T: float, n_points: float, n: int
             ) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of the Black-Scholes process, each starting at S0.
@@ -90,15 +89,15 @@ class DataLoader:
         - mu: Drift coefficient
         - sigma: Volatility
         - T: Time horizon
-        - dt: Time step size
+        - n_points: Number of points in the time grid (including initial point)
         - n: Number of paths to simulate
 
         Returns:
-        - A NumPy array of simulated stock prices, shape (n, num_steps+1)
+        - A NumPy array of simulated stock prices, shape (n, n_points)
         - A NumPy array of time steps
         """
 
-        W, t = self.simulate_brownian_motion(T=T, dt=dt, n=n)
+        W, t = self.simulate_brownian_motion(T=T, n_points=n_points, n=n)
 
         # Calculate paths
         X = (mu - 0.5*sigma**2) * t + sigma * W
@@ -108,7 +107,7 @@ class DataLoader:
     
     def simulate_kou_jump_diffusion(
             self, S0: float, mu: float, sigma: float, lambda_: float, p: float, eta1: float, eta2: float, 
-            T: float, dt: float, n: int) -> Tuple[NDArray, NDArray]:
+            T: float, n_points: float, n: int) -> Tuple[NDArray, NDArray]:
         """
         Simulate n paths of the Kou jump-diffusion process, each starting at S0.
 
@@ -121,18 +120,19 @@ class DataLoader:
         - eta1: Rate of positive jump's exponential distribution
         - eta2: Rate of negative jump's exponential distribution
         - T: Time horizon
-        - dt: Time step size
+        - n_points: Number of points in the time grid (including initial point)
         - n: Number of paths to simulate
 
         Returns:
-        - A NumPy array of simulated stock prices, shape (n, num_steps+1)
+        - A NumPy array of simulated stock prices, shape (n, num_steps)
         - A NumPy array of time steps
         """
-        gbm, t = self.simulate_geometric_brownian_motion(S0=S0, mu=mu, sigma=sigma, T=T, dt=dt, n=n)
-
+        gbm, t = self.simulate_geometric_brownian_motion(S0=S0, mu=mu, sigma=sigma, T=T, n_points=n_points, n=n)
+        
         # Jump component
         dv = np.ones((n, len(t)))
         # increments of Poisson process
+        dt = T / (n_points - 1)
         dN = np.random.poisson(lambda_*dt, size=(n, len(t)-1))
         # TODO: (optional) Make this computation more efficient
         for i in range(n):
@@ -158,12 +158,12 @@ if __name__ == "__main__":
 
     brownian_motion_params = {
         "T": 5., 
-        "dt": 0.004, 
+        "n_points": 252, 
         "n": 1000
     }
     fractional_bm_params = {
         "T": 1., 
-        "dt": 0.004, 
+        "n_points": 252, 
         "n": 1000, 
         "hurst": 0.75
     }
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         "mu": 0.05,
         "sigma": 0.2, 
         "T": 5., 
-        "dt": 0.004, 
+        "n_points": 252, 
         "n": 1000
     }
     kou_params = {
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         "eta1": 50., 
         "eta2": 25., 
         "T": 10., 
-        "dt": 1/250, 
+        "n_points": 252, 
         "n": 1000
     }
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)

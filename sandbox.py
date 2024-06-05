@@ -7,7 +7,7 @@ from esig import tosig as ts
 
 brownian_motion_params = {
     "T": 5., 
-    "dt": 0.004, 
+    "n_points": 252, 
     "n": 1000
 }
 gbm_params = {
@@ -15,7 +15,7 @@ gbm_params = {
     "mu": 0.05,
     "sigma": 0.2, 
     "T": 5., 
-    "dt": 0.004, 
+    "n_points": 252, 
     "n": 1000
 }
 kou_params = {
@@ -27,7 +27,7 @@ kou_params = {
     "eta1": 10., 
     "eta2": 5., 
     "T": 5., 
-    "dt": 0.004, 
+    "n_points": 252, 
     "n": 1000
 }
 bm_loader = make_dataset.DataLoader(method="Brownian_Motion", params=brownian_motion_params)
