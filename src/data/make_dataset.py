@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 # needed for Python 3.7 and below
 from typing import Union, Tuple, Dict
-from numpy.typing import NDArray
 # fractional brownian motion
 from fbm import FBM
 class DataLoader:
@@ -17,9 +16,10 @@ class DataLoader:
         self.params = params
         self.seed = seed
 
-    def create_dataset(self, output_type: str = "DataFrame") -> Union[pd.DataFrame, Tuple[NDArray, NDArray]]:
+    def create_dataset(self, output_type: str = "DataFrame"):
         if self.method in self.method_functions:
-            np.random.seed(self.seed)
+            if self.seed is not None:
+                np.random.seed(self.seed)
             paths, time = self.method_functions[self.method](**self.params)
             # Transform the data so that each time step is a row and each path is a column
             if output_type == "np.ndarray":
@@ -37,7 +37,7 @@ class DataLoader:
             )
 
         
-    def simulate_brownian_motion(self, T: float, n_points: float, n: int) -> Tuple[NDArray, NDArray]:
+    def simulate_brownian_motion(self, T: float, n_points: float, n: int):
         """
         Simulate n paths of scaled Brownian motion.
 
@@ -58,7 +58,7 @@ class DataLoader:
 
         return W, t
     
-    def simulate_fractional_brownian_motion(self, T: float, n_points: float, n: int, hurst: float) -> Tuple[NDArray, NDArray]:
+    def simulate_fractional_brownian_motion(self, T: float, n_points: float, n: int, hurst: float):
         """
         Simulate n paths of fractional Brownian motion.
 
@@ -80,7 +80,7 @@ class DataLoader:
 
     def simulate_geometric_brownian_motion(
             self, S0: float, mu: float, sigma: float, T: float, n_points: float, n: int
-            ) -> Tuple[NDArray, NDArray]:
+            ):
         """
         Simulate n paths of the Black-Scholes process, each starting at S0.
 
@@ -107,7 +107,7 @@ class DataLoader:
     
     def simulate_kou_jump_diffusion(
             self, S0: float, mu: float, sigma: float, lambda_: float, p: float, eta1: float, eta2: float, 
-            T: float, n_points: float, n: int) -> Tuple[NDArray, NDArray]:
+            T: float, n_points: float, n: int):
         """
         Simulate n paths of the Kou jump-diffusion process, each starting at S0.
 

@@ -5,3 +5,6 @@ __pycache__
 *.pyc
 csv_export/
 plots/
+buehler_output/
+*.xlsx
+.credentials

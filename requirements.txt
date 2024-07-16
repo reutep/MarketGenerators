@@ -4,6 +4,7 @@ matplotlib
 esig
 scikit-learn
 ipykernel
+ipywidgets
 tqdm # for progress bars
 datasets # Bühler et al. uses this
 tensorflow==1.15

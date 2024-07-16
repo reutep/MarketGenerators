@@ -26,6 +26,8 @@ def print_basic_gbm_metrics(n_periods, annualization_factor, ground_paths_df, re
     print("-------------------------------------")
     print(f"ul % > {return_threshold*100:.2f}%:\t {ul_percentage:.5f}")
     print(f"gen % > {return_threshold*100:.2f}%:\t {gen_percentage:.5f}")
+    print("-------------------------------------")
+    print("-------------------------------------")
     return
 
 def print_basic_non_gbm_metrics(n_periods, annualization_factor, ground_paths_df, recovered_paths_df, approx_df, return_threshold):
@@ -57,6 +59,8 @@ def print_basic_non_gbm_metrics(n_periods, annualization_factor, ground_paths_df
     print(f"gen % > {return_threshold*100:.2f}%:\t {gen_percentage:.5f}")
     print(f"ul % > {return_threshold*100:.2f}%:\t {ul_percentage:.5f}")
     print(f"appr % > {return_threshold*100:.2f}%:\t {approx_percentage:.5f}")
+    print("-------------------------------------")
+    print("-------------------------------------")
 
     risk_neutral_pricing_rate = np.log(approx_mean) / n_periods
     return risk_neutral_pricing_rate
