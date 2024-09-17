@@ -8,7 +8,7 @@ ipywidgets
 tqdm # for progress bars
 datasets # Bühler et al. uses this
 tensorflow==1.15
-
+yfinance==0.1.63 # for downloading data
 protobuf==3.20.1 # for tensorflow
 pandas_datareader # for downloading data
 

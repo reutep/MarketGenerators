@@ -98,19 +98,23 @@ class OptionPricingEngine:
         return np.maximum(K - x.apply(gmean, axis=1), 0)
 
     ### Calculations #################################################################################################
-    def calc_all_T(self, grid_size=1, approx_df=None, recalculate_all=False):
-        self.calculate_option_prices_T(grid_size = grid_size, approx_df = approx_df, recalculate_all=recalculate_all)
+    def calc_all_T(self, grid_size=1, approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
+        self.calculate_option_prices_T(
+            grid_size = grid_size, approx_df = approx_df, recalculate_all=recalculate_all, resample=resample, recalculate_input=recalculate_input
+        )
         self.calculate_option_price_deviation_absolute()
         self.calculate_option_price_deviation_relative()
         return
 
-    def calc_all_K(self, K_values=np.linspace(0.5, 1.5, 100), approx_df=None, recalculate_all=False):
-        self.calculate_option_prices_K(K_values = K_values, approx_df = approx_df, recalculate_all=recalculate_all)
+    def calc_all_K(self, K_values=np.linspace(0.5, 1.5, 100), approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
+        self.calculate_option_prices_K(
+            K_values = K_values, approx_df = approx_df, recalculate_all=recalculate_all, resample=resample, recalculate_input=recalculate_input
+        )
         self.calculate_option_price_deviation_absolute()
         self.calculate_option_price_deviation_relative()
         return
 
-    def calculate_option_prices_T(self, grid_size=1, approx_df=None, recalculate_all=False):
+    def calculate_option_prices_T(self, grid_size=1, approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
         # Currently only needed for lookback options
         # Store results
         self.T_values = []
@@ -121,9 +125,10 @@ class OptionPricingEngine:
             hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
         ) or recalculate_all
 
-        if recalculate:
-            self.exact_call_prices = []
-            self.exact_put_prices = []
+        if recalculate or recalculate_input:
+            if recalculate:
+                self.exact_call_prices = []
+                self.exact_put_prices = []
             self.mc_call_ground_prices = []
             self.mc_put_ground_prices = []
 
@@ -131,24 +136,33 @@ class OptionPricingEngine:
             if T_cur == 0 or (i % grid_size != 0 and T_cur != self.T):
                 continue
 
-            mc_call_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.call_payoff(self.gen_paths_df.iloc[:, :(i+1)]))
-            mc_put_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.put_payoff(self.gen_paths_df.iloc[:, :(i+1)]))
+            if resample:
+                # if resample, take 1000 random paths/rows for new batch
+                sample_df = self.gen_paths_df.sample(n=1000, axis=0, random_state=int(T_cur*10000))
+                mc_call_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.call_payoff(sample_df.iloc[:, :(i+1)]))
+                mc_put_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.put_payoff(sample_df.iloc[:, :(i+1)]))
+            else:
+                # take all paths/rows
+                mc_call_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.call_payoff(self.gen_paths_df.iloc[:, :(i+1)]))
+                mc_put_gen_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.put_payoff(self.gen_paths_df.iloc[:, :(i+1)]))
             self.mc_call_gen_prices.append(mc_call_gen_price)
             self.mc_put_gen_prices.append(mc_put_gen_price)
             self.T_values.append(T_cur)
             
-            if recalculate:
-                if self.approx_exact:
-                    exact_call_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(approx_df.iloc[:, :(i+1)]))
-                    exact_put_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(approx_df.iloc[:, :(i+1)]))
-                else: 
-                    exact_call_price, exact_put_price = self.exact_call_put(T_cur)
+            if recalculate or recalculate_input:
+                if recalculate:
+                    if self.approx_exact:
+                        exact_call_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(approx_df.iloc[:, :(i+1)]))
+                        exact_put_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(approx_df.iloc[:, :(i+1)]))
+                    else: 
+                        exact_call_price, exact_put_price = self.exact_call_put(T_cur)
+
+                    self.exact_call_prices.append(exact_call_price)
+                    self.exact_put_prices.append(exact_put_price)
 
                 mc_call_ground_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.call_payoff(self.ground_paths_df.iloc[:, :(i+1)]))
                 mc_put_ground_price = np.mean(np.exp(-self.r*(T_cur-self.t))*self.put_payoff(self.ground_paths_df.iloc[:, :(i+1)]))
                 
-                self.exact_call_prices.append(exact_call_price)
-                self.exact_put_prices.append(exact_put_price)
                 self.mc_call_ground_prices.append(mc_call_ground_price)
                 self.mc_put_ground_prices.append(mc_put_ground_price)
 
@@ -163,7 +177,7 @@ class OptionPricingEngine:
         })
         return
 
-    def calculate_option_prices_K(self, K_values, approx_df=None, recalculate_all=False):
+    def calculate_option_prices_K(self, K_values, approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
         # Store results
         self.K_values = K_values
         self.mc_call_gen_prices = []
@@ -173,30 +187,42 @@ class OptionPricingEngine:
             hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
         ) or recalculate_all
 
-        if recalculate:
-            self.exact_call_prices = []
-            self.exact_put_prices = []
+        if recalculate or recalculate_input:
+            if recalculate:
+                self.exact_call_prices = []
+                self.exact_put_prices = []
             self.mc_call_ground_prices = []
             self.mc_put_ground_prices = []
 
         for K in K_values:
-            mc_call_gen_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(self.gen_paths_df, K))
-            mc_put_gen_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(self.gen_paths_df, K))
+            if resample:
+                # if resample, take 1000 random paths/rows for new batch
+                sample_df = self.gen_paths_df.sample(n=1000, axis=0, random_state=int(K*10000))
+                mc_call_gen_price = np.mean(
+                    np.exp(-self.r*(self.T-self.t))*self.call_payoff(sample_df, K)
+                )
+                mc_put_gen_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(sample_df, K))
+            else:
+                # take all paths/rows
+                mc_call_gen_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(self.gen_paths_df, K))
+                mc_put_gen_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(self.gen_paths_df, K))
+        
             self.mc_call_gen_prices.append(mc_call_gen_price)
             self.mc_put_gen_prices.append(mc_put_gen_price)
             
-            if recalculate:
-                if self.approx_exact:
-                    exact_call_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(approx_df, K))
-                    exact_put_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(approx_df, K))
-                else: 
-                    exact_call_price, exact_put_price = self.exact_call_put(K)
+            if recalculate or recalculate_input:
+                if recalculate:
+                    if self.approx_exact:
+                        exact_call_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(approx_df, K))
+                        exact_put_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(approx_df, K))
+                    else: 
+                        exact_call_price, exact_put_price = self.exact_call_put(K)
+                    self.exact_call_prices.append(exact_call_price)
+                    self.exact_put_prices.append(exact_put_price)
 
                 mc_call_ground_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.call_payoff(self.ground_paths_df, K))
                 mc_put_ground_price = np.mean(np.exp(-self.r*(self.T-self.t))*self.put_payoff(self.ground_paths_df, K))
 
-                self.exact_call_prices.append(exact_call_price)
-                self.exact_put_prices.append(exact_put_price)
                 self.mc_call_ground_prices.append(mc_call_ground_price)
                 self.mc_put_ground_prices.append(mc_put_ground_price)
 

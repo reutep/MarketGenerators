@@ -4,13 +4,16 @@ import pandas as pd
 from typing import Union, Tuple, Dict
 # fractional brownian motion
 from fbm import FBM
+# yahoo finance data
+import yfinance as yf
 class DataLoader:
     def __init__(self, method: str, params: Dict[str, Union[float, int]], seed: int = None):
         self.method_functions = {
             "Brownian_Motion": self.simulate_brownian_motion,
             "Fractional_BM": self.simulate_fractional_brownian_motion,
             "GBM": self.simulate_geometric_brownian_motion,
-            "Kou_Jump_Diffusion": self.simulate_kou_jump_diffusion
+            "Kou_Jump_Diffusion": self.simulate_kou_jump_diffusion,
+            "YFinance": self.get_yfinance_data
         }
         self.method = method
         self.params = params
@@ -23,7 +26,7 @@ class DataLoader:
             paths, time = self.method_functions[self.method](**self.params)
             # Transform the data so that each time step is a row and each path is a column
             if output_type == "np.ndarray":
-                return paths.T, time
+                return paths.T, time.T
             elif output_type == "DataFrame":
                 return pd.DataFrame(paths, columns=time)
             else:
@@ -124,7 +127,7 @@ class DataLoader:
         - n: Number of paths to simulate
 
         Returns:
-        - A NumPy array of simulated stock prices, shape (n, num_steps)
+        - A NumPy array of simulated stock prices, shape (n, n_points)
         - A NumPy array of time steps
         """
         gbm, t = self.simulate_geometric_brownian_motion(S0=S0, mu=mu, sigma=sigma, T=T, n_points=n_points, n=n)
@@ -149,12 +152,53 @@ class DataLoader:
         # Calculate the paths with jumps
         S = gbm * np.cumprod(dv, axis=1) 
         return S, t
+    
+    def get_yfinance_data(self, S0: float=1., ticker="^GSPC", start=None, end="2024-06-30", n_points: int=22, split=False):
+        """
+        Download and reformat yfinance data starting at S0.
 
+        Parameters:
+        - S0: Initial price (rescale time series to start at S0)
+        - T: Time horizon (in years)
+
+        Returns:
+        - A NumPy array of downloaded S&P500 data ending , shape (n, num_steps)
+        - A NumPy array of time steps (rescaled such that first point is 0)
+        """
+        raw_data = yf.download(tickers=ticker, start=start, end=end, progress=False)["Adj Close"]
+        S = np.array(raw_data)
+
+        # if splt is True, split the data into n_points chunks:
+        if split:
+            returns = S[1:] / S[:-1]
+            n = returns.shape[0] // (n_points-1)
+            # split such that some data in beginning of the time series is lost (returns.shape[0] % (n_points-1) / (n_points-1))
+            n_returns = n * (n_points-1)
+            returns = returns[-n_returns:]
+            returns = returns.reshape(n, n_points-1)
+            # t is the annualized time between each return
+            t_raw = np.array((raw_data.index[1:] - raw_data.index[0]).days)[-n_returns:]
+            t_raw = t_raw.reshape(n, n_points-1)
+            t = np.zeros((n, n_points))
+            t[1:, 0] = t_raw[:-1,-1]
+            t[:,1:] = t_raw - t[:, 0].reshape(-1, 1)
+            t[:, 0] = 0
+            t = t / 365.25  # convert days to years    
+            S = np.zeros((n, n_points))
+            S[:, 0] = S0
+            S[:, 1:] = np.cumprod(returns, axis=1)
+        else:
+            S = S.reshape(1,-1)
+            if S0 is not None:
+                S = S / S[0,0] * S0
+            t = np.array((raw_data.index - raw_data.index[0]).days)
+            t = t / 365.25  # convert days to years
+
+        return S, t
 
 ##### debug / test #####
 if __name__ == "__main__": 
     import matplotlib.pyplot as plt
-    from src.features.data_transformer import Transformer
 
     brownian_motion_params = {
         "T": 5., 
@@ -171,9 +215,9 @@ if __name__ == "__main__":
         "S0": 1., 
         "mu": 0.05,
         "sigma": 0.2, 
-        "T": 5., 
+        "T": 3., 
         "n_points": 252, 
-        "n": 1000
+        "n": 5
     }
     kou_params = {
         "S0": 1., 
@@ -183,27 +227,31 @@ if __name__ == "__main__":
         "p": 0.3, 
         "eta1": 50., 
         "eta2": 25., 
-        "T": 10., 
+        "T": 3., 
         "n_points": 252, 
-        "n": 1000
+        "n": 5
+    }
+    yfinance_params = {
+        "S0": 1., 
+        "ticker": "^GSPC", 
+        "start": "1999-07-01", 
+        "end": "2024-06-30"
     }
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
     gbm_loader = DataLoader(method="GBM", params=gbm_params)
     kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-    prices_df = kou_loader.create_dataset(output_type="DataFrame")
-
-    test = Transformer(prices_df)
+    gspc_loader = DataLoader(method="YFinance", params=yfinance_params)
+    prices, time = gspc_loader.create_dataset(output_type="np.ndarray")
 
     # Assuming df_times_as_index is the DataFrame with times as row indices
-    plt.figure(figsize=(18, 10))
-    for column in prices_df.columns:
+    plt.figure(figsize=(9, 6))
+    # for column in prices_df.columns:
         # plt.plot(prices_df.index, prices_df[column], alpha=1)  # for <= 50 paths
         # plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
-        plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
+    plt.plot(time, prices, linewidth=1, alpha=1) # for > 1000 paths
 
-    plt.title('Simulated Paths over Time')
-    plt.xlabel('Time')
-    plt.ylabel('Price')
-    plt.ylim(0, 4)
+    # plt.title('Simulated Path over Time')
+    # plt.xlabel('Time')
+    # plt.ylabel('Price')
     plt.grid(True)
     plt.show()
