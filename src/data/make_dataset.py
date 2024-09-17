@@ -199,6 +199,7 @@ class DataLoader:
 ##### debug / test #####
 if __name__ == "__main__": 
     import matplotlib.pyplot as plt
+    from src.features.data_transformer import Transformer
 
     brownian_motion_params = {
         "T": 5., 
@@ -215,9 +216,9 @@ if __name__ == "__main__":
         "S0": 1., 
         "mu": 0.05,
         "sigma": 0.2, 
-        "T": 3., 
+        "T": 5., 
         "n_points": 252, 
-        "n": 5
+        "n": 1000
     }
     kou_params = {
         "S0": 1., 
@@ -227,31 +228,27 @@ if __name__ == "__main__":
         "p": 0.3, 
         "eta1": 50., 
         "eta2": 25., 
-        "T": 3., 
+        "T": 10., 
         "n_points": 252, 
-        "n": 5
-    }
-    yfinance_params = {
-        "S0": 1., 
-        "ticker": "^GSPC", 
-        "start": "1999-07-01", 
-        "end": "2024-06-30"
+        "n": 1000
     }
     bm_loader = DataLoader(method="Brownian_Motion", params=brownian_motion_params)
     gbm_loader = DataLoader(method="GBM", params=gbm_params)
     kou_loader = DataLoader(method="Kou_Jump_Diffusion", params=kou_params)
-    gspc_loader = DataLoader(method="YFinance", params=yfinance_params)
-    prices, time = gspc_loader.create_dataset(output_type="np.ndarray")
+    prices_df = kou_loader.create_dataset(output_type="DataFrame")
+
+    test = Transformer(prices_df)
 
     # Assuming df_times_as_index is the DataFrame with times as row indices
-    plt.figure(figsize=(9, 6))
-    # for column in prices_df.columns:
+    plt.figure(figsize=(18, 10))
+    for column in prices_df.columns:
         # plt.plot(prices_df.index, prices_df[column], alpha=1)  # for <= 50 paths
         # plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.4, color='blue') # for > 50 paths
-    plt.plot(time, prices, linewidth=1, alpha=1) # for > 1000 paths
+        plt.plot(prices_df.index, prices_df[column], linewidth=0.1, alpha=0.2, color='blue') # for > 1000 paths
 
-    # plt.title('Simulated Path over Time')
-    # plt.xlabel('Time')
-    # plt.ylabel('Price')
+    plt.title('Simulated Paths over Time')
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.ylim(0, 4)
     plt.grid(True)
     plt.show()
