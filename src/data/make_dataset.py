@@ -168,7 +168,7 @@ class DataLoader:
         raw_data = yf.download(tickers=ticker, start=start, end=end, progress=False)["Adj Close"]
         S = np.array(raw_data)
 
-        # if splt is True, split the data into n_points chunks:
+        # if splt is True, split the data into chunks of length n_points:
         if split:
             returns = S[1:] / S[:-1]
             n = returns.shape[0] // (n_points-1)

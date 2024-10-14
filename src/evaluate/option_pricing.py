@@ -6,7 +6,7 @@ import pandas as pd
 class OptionPricingEngine:
     def __init__(
         self, type, S0, T, t, ground_paths_df, gen_paths_df, 
-        r = None, sigma = None, approx_exact = False
+        r = None, sigma = None, approx_exact = False, input_is_real_data = False
     ):
         self.type = type
         self.S0 = S0
@@ -17,6 +17,7 @@ class OptionPricingEngine:
         self.ground_paths_df = ground_paths_df
         self.gen_paths_df = gen_paths_df
         self.approx_exact = approx_exact
+        self.input_is_real_data = input_is_real_data
 
         type_functions = {
             "European_exact": self.exact_european_prices,
@@ -32,7 +33,7 @@ class OptionPricingEngine:
         if self.type+"_call" in type_functions:
             self.call_payoff = type_functions[self.type+"_call"]
             self.put_payoff = type_functions[self.type+"_put"]
-            if not approx_exact:
+            if not approx_exact and not input_is_real_data:
                 self.exact_call_put = type_functions[self.type+"_exact"] 
         else:
             raise ValueError(f'Option type "{self.type}" currently not implemented.')
@@ -115,15 +116,17 @@ class OptionPricingEngine:
         return
 
     def calculate_option_prices_T(self, grid_size=1, approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
-        # Currently only needed for lookback options
+        # Needed for lookback options
         # Store results
         self.T_values = []
         self.mc_call_gen_prices = []
         self.mc_put_gen_prices = []
-        recalculate = not (
-            hasattr(self, "exact_call_prices") and hasattr(self, "exact_put_prices") and \
-            hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
-        ) or recalculate_all
+        recalculate = (
+            not (
+                hasattr(self, "exact_call_prices") and hasattr(self, "exact_put_prices") and \
+                hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
+            ) or recalculate_all
+        ) and not self.input_is_real_data
 
         if recalculate or recalculate_input:
             if recalculate:
@@ -168,13 +171,14 @@ class OptionPricingEngine:
 
         self.results_df = pd.DataFrame({
             "T_values": self.T_values, 
-            "exact_call_prices": self.exact_call_prices,
-            "exact_put_prices": self.exact_put_prices,
             "mc_call_ground_prices": self.mc_call_ground_prices,
             "mc_put_ground_prices": self.mc_put_ground_prices,
             "mc_call_gen_prices": self.mc_call_gen_prices,
             "mc_put_gen_prices": self.mc_put_gen_prices
         })
+        if not self.input_is_real_data:
+            self.results_df["exact_call_prices"] = self.exact_call_prices
+            self.results_df["exact_put_prices"] = self.exact_put_prices
         return
 
     def calculate_option_prices_K(self, K_values, approx_df=None, recalculate_all=False, resample=True, recalculate_input=False):
@@ -182,10 +186,12 @@ class OptionPricingEngine:
         self.K_values = K_values
         self.mc_call_gen_prices = []
         self.mc_put_gen_prices = []
-        recalculate = not (
-            hasattr(self, "exact_call_prices") and hasattr(self, "exact_put_prices") and \
-            hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
-        ) or recalculate_all
+        recalculate = (
+            not (
+                hasattr(self, "exact_call_prices") and hasattr(self, "exact_put_prices") and \
+                hasattr(self, "mc_call_ground_prices") and hasattr(self, "mc_put_ground_prices")
+            ) or recalculate_all
+        ) and not self.input_is_real_data
 
         if recalculate or recalculate_input:
             if recalculate:
@@ -228,39 +234,60 @@ class OptionPricingEngine:
 
         self.results_df = pd.DataFrame({
             "K_values": self.K_values, 
-            "exact_call_prices": self.exact_call_prices,
-            "exact_put_prices": self.exact_put_prices,
             "mc_call_ground_prices": self.mc_call_ground_prices,
             "mc_put_ground_prices": self.mc_put_ground_prices,
             "mc_call_gen_prices": self.mc_call_gen_prices,
             "mc_put_gen_prices": self.mc_put_gen_prices
         })
+        if not self.input_is_real_data:
+            self.results_df["exact_call_prices"] = self.exact_call_prices
+            self.results_df["exact_put_prices"] = self.exact_put_prices
         return
     
     def calculate_option_price_deviation_absolute(self):
-        self.ground_call_deviations = abs(np.array(self.mc_call_ground_prices) - np.array(self.exact_call_prices))
-        self.ground_put_deviations = abs(np.array(self.mc_put_ground_prices) - np.array(self.exact_put_prices))
-        self.gen_call_deviations = abs(np.array(self.mc_call_gen_prices) - np.array(self.exact_call_prices))
-        self.gen_put_deviations = abs(np.array(self.mc_put_gen_prices) - np.array(self.exact_put_prices))
-        new_columns = pd.DataFrame({
-            "ground_call_deviations": self.ground_call_deviations, 
-            "ground_put_deviations": self.ground_put_deviations,
-            "gen_call_deviations": self.gen_call_deviations,
-            "gen_put_deviations": self.gen_put_deviations,
-        })
+        if not self.input_is_real_data:
+            # deviations from (approximate) exact prices
+            self.ground_call_deviations = abs(np.array(self.mc_call_ground_prices) - np.array(self.exact_call_prices))
+            self.ground_put_deviations = abs(np.array(self.mc_put_ground_prices) - np.array(self.exact_put_prices))
+            self.gen_call_deviations = abs(np.array(self.mc_call_gen_prices) - np.array(self.exact_call_prices))
+            self.gen_put_deviations = abs(np.array(self.mc_put_gen_prices) - np.array(self.exact_put_prices))
+            new_columns = pd.DataFrame({
+                "ground_call_deviations": self.ground_call_deviations,
+                "ground_put_deviations": self.ground_put_deviations,
+                "gen_call_deviations": self.gen_call_deviations,
+                "gen_put_deviations": self.gen_put_deviations,
+            })
+        else:
+            # deviations from input data prices
+            self.gen_call_deviations = abs(np.array(self.mc_call_gen_prices) - np.array(self.mc_call_ground_prices))
+            self.gen_put_deviations = abs(np.array(self.mc_put_gen_prices) - np.array(self.mc_put_ground_prices))
+            new_columns = pd.DataFrame({
+                "gen_call_deviations": self.gen_call_deviations,
+                "gen_put_deviations": self.gen_put_deviations,
+            })
+
         self.results_df = pd.concat([self.results_df, new_columns], axis=1)
         return
     
     def calculate_option_price_deviation_relative(self):
-        self.ground_call_deviations_rel = self.ground_call_deviations / np.array(self.exact_call_prices) * 100
-        self.ground_put_deviations_rel = self.ground_put_deviations / np.array(self.exact_put_prices) * 100
-        self.gen_call_deviations_rel = self.gen_call_deviations / np.array(self.exact_call_prices) * 100
-        self.gen_put_deviations_rel = self.gen_put_deviations / np.array(self.exact_put_prices) * 100
-        new_columns = pd.DataFrame({
-            "ground_call_deviations_rel": self.ground_call_deviations_rel, 
-            "ground_put_deviations_rel": self.ground_put_deviations_rel,
-            "gen_call_deviations_rel": self.gen_call_deviations_rel,
-            "gen_put_deviations_rel": self.gen_put_deviations_rel,
-        })
+        if not self.input_is_real_data:
+            self.ground_call_deviations_rel = self.ground_call_deviations / np.array(self.exact_call_prices) * 100
+            self.ground_put_deviations_rel = self.ground_put_deviations / np.array(self.exact_put_prices) * 100
+            self.gen_call_deviations_rel = self.gen_call_deviations / np.array(self.exact_call_prices) * 100
+            self.gen_put_deviations_rel = self.gen_put_deviations / np.array(self.exact_put_prices) * 100
+            new_columns = pd.DataFrame({
+                "ground_call_deviations_rel": self.ground_call_deviations_rel,
+                "ground_put_deviations_rel": self.ground_put_deviations_rel,
+                "gen_call_deviations_rel": self.gen_call_deviations_rel,
+                "gen_put_deviations_rel": self.gen_put_deviations_rel,
+            })
+        else:
+            self.gen_call_deviations_rel = self.gen_call_deviations / np.array(self.mc_call_ground_prices) * 100
+            self.gen_put_deviations_rel = self.gen_put_deviations / np.array(self.mc_put_ground_prices) * 100
+            new_columns = pd.DataFrame({
+                "gen_call_deviations_rel": self.gen_call_deviations_rel,
+                "gen_put_deviations_rel": self.gen_put_deviations_rel,
+            })
+
         self.results_df = pd.concat([self.results_df, new_columns], axis=1)
         return
