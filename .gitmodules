@@ -4,6 +4,3 @@
 [submodule "LiaoWGAN"]
 	path = LiaoWGAN
 	url = https://github.com/reutep/LiaoWGAN
-[submodule "SongScoreSDE"]
-	path = SongScoreSDE
-	url = https://github.com/reutep/SongScoreSDE

@@ -1,5 +1,4 @@
 .venv/
-.venv2/
 settings.json
 *.pyc
 csv_export/
