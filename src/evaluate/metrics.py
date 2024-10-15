@@ -1,11 +1,24 @@
-# import pandas as pd
 import numpy as np
 
-def print_basic_gbm_metrics(n_periods, annualization_factor, ground_paths_df, recovered_paths_df, exp_stdev, mu, return_threshold):
+def print_basic_gbm_metrics(
+    n_periods, annualization_factor, ground_paths_df, recovered_paths_df, exp_stdev, mu, return_threshold
+):
+    """
+    Print basic metrics for Geometric Brownian Motion (GBM).
+
+    Parameters:
+    - n_periods: Number of periods
+    - annualization_factor: Factor to annualize the standard deviation
+    - ground_paths_df: DataFrame of ground truth paths
+    - recovered_paths_df: DataFrame of generated paths
+    - exp_stdev: Expected standard deviation
+    - mu: Drift coefficient
+    - return_threshold: Threshold for returns
+    """
     recovered_log_returns_df = np.log(recovered_paths_df).diff(axis=1).iloc[:, 1:]
     ground_log_returns_df = np.log(ground_paths_df).diff(axis=1).iloc[:, 1:]
     
-    # compute statistics
+    # Compute statistics
     generated_mean = np.mean(recovered_paths_df.iloc[:, -1])
     input_mean = np.mean(ground_paths_df.iloc[:, -1])
     expected_mean = np.exp(mu * n_periods)
@@ -13,8 +26,14 @@ def print_basic_gbm_metrics(n_periods, annualization_factor, ground_paths_df, re
     ann_gen_stdev = recovered_log_returns_df.std(axis=1).mean() * np.sqrt(annualization_factor)
     ann_pat_stdev = ground_log_returns_df.std(axis=1).mean() * np.sqrt(annualization_factor)
     
-    ul_percentage = ((abs(ground_log_returns_df.values.flatten()) > return_threshold).sum() / len(ground_log_returns_df.values.flatten())) * 100
-    gen_percentage = ((abs(recovered_log_returns_df.values.flatten()) > return_threshold).sum() / len(recovered_log_returns_df.values.flatten())) * 100
+    ul_percentage = (
+        (abs(ground_log_returns_df.values.flatten()) > return_threshold).sum() / 
+        len(ground_log_returns_df.values.flatten())
+    ) * 100
+    gen_percentage = (
+        (abs(recovered_log_returns_df.values.flatten()) > return_threshold).sum() / 
+        len(recovered_log_returns_df.values.flatten())
+    ) * 100
 
     print(f"Generated mean:\t {generated_mean:.5f}")
     print(f"Input mean:\t {input_mean:.5f}")
@@ -30,12 +49,25 @@ def print_basic_gbm_metrics(n_periods, annualization_factor, ground_paths_df, re
     print("-------------------------------------")
     return
 
-def print_basic_non_gbm_metrics(n_periods, annualization_factor, ground_paths_df, recovered_paths_df, approx_df, return_threshold):
+def print_basic_non_gbm_metrics(
+    n_periods, annualization_factor, ground_paths_df, recovered_paths_df, approx_df, return_threshold
+):
+    """
+    Print basic metrics for non-Geometric Brownian Motion (non-GBM).
+
+    Parameters:
+    - n_periods: Number of periods
+    - annualization_factor: Factor to annualize the standard deviation
+    - ground_paths_df: DataFrame of ground truth paths
+    - recovered_paths_df: DataFrame of generated paths
+    - approx_df: Large DataFrame of approximate metrics
+    - return_threshold: Threshold for returns
+    """
     recovered_log_returns_df = np.log(recovered_paths_df).diff(axis=1).iloc[:, 1:]
     ground_log_returns_df = np.log(ground_paths_df).diff(axis=1).iloc[:, 1:]
     approx_log_returns_df = np.log(approx_df).diff(axis=1).iloc[:, 1:]
     
-    # compute statistics
+    # Compute statistics
     generated_mean = np.mean(recovered_paths_df.iloc[:, -1])
     input_mean = np.mean(ground_paths_df.iloc[:, -1])
     approx_mean = np.mean(approx_df.iloc[:, -1])
@@ -44,9 +76,18 @@ def print_basic_non_gbm_metrics(n_periods, annualization_factor, ground_paths_df
     ann_pat_stdev = ground_log_returns_df.std(axis=1).mean() * np.sqrt(annualization_factor)
     ann_approx_stdev = approx_log_returns_df.std(axis=1).mean() * np.sqrt(annualization_factor)
     
-    ul_percentage = ((abs(ground_log_returns_df.values.flatten()) > return_threshold).sum() / len(ground_log_returns_df.values.flatten())) * 100
-    gen_percentage = ((abs(recovered_log_returns_df.values.flatten()) > return_threshold).sum() / len(recovered_log_returns_df.values.flatten())) * 100
-    approx_percentage = ((abs(approx_log_returns_df.values.flatten()) > return_threshold).sum() / len(approx_log_returns_df.values.flatten())) * 100
+    ul_percentage = (
+        (abs(ground_log_returns_df.values.flatten()) > return_threshold).sum() / 
+        len(ground_log_returns_df.values.flatten())
+    ) * 100
+    gen_percentage = (
+        (abs(recovered_log_returns_df.values.flatten()) > return_threshold).sum() / 
+        len(recovered_log_returns_df.values.flatten())
+    ) * 100
+    approx_percentage = (
+        (abs(approx_log_returns_df.values.flatten()) > return_threshold).sum() / 
+        len(approx_log_returns_df.values.flatten())
+    ) * 100
 
     print(f"Generated mean:\t {generated_mean:.5f}")
     print(f"Input mean:\t {input_mean:.5f}")

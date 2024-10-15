@@ -6,7 +6,9 @@ from typing import Union, Tuple, Dict
 from fbm import FBM
 # yahoo finance data
 import yfinance as yf
+
 class DataLoader:
+    """Class for loading and simulating financial data."""
     def __init__(self, method: str, params: Dict[str, Union[float, int]], seed: int = None):
         self.method_functions = {
             "Brownian_Motion": self.simulate_brownian_motion,
@@ -20,6 +22,7 @@ class DataLoader:
         self.seed = seed
 
     def create_dataset(self, output_type: str = "DataFrame"):
+        """Create dataset based on the specified method."""
         if self.method in self.method_functions:
             if self.seed is not None:
                 np.random.seed(self.seed)
@@ -33,13 +36,11 @@ class DataLoader:
                 raise ValueError(f'output_type={output_type} not implemented.')
         else:
             method_list = "', '".join(self.method_functions.keys())
-
             raise ValueError(
                 f'Data creation method "{self.method}" currently not implemented. ' +
                 f'Choose from "{method_list}".'
             )
 
-        
     def simulate_brownian_motion(self, T: float, n_points: float, n: int):
         """
         Simulate n paths of scaled Brownian motion.
@@ -55,8 +56,8 @@ class DataLoader:
         """
         t = np.linspace(0, T, n_points)
         dt = T / (n_points - 1)
-        dW = np.random.normal(size=(n, n_points-1))  # increments
-        W = np.cumsum(np.sqrt(dt)*dW, axis=1)  # cumulative sum to generate paths
+        dW = np.random.normal(size=(n, n_points - 1)) 
+        W = np.cumsum(np.sqrt(dt) * dW, axis=1)  # cumulative sum to generate paths
         W = np.hstack([np.zeros((n, 1)), W])  # Including zero at the start for the initial condition
 
         return W, t
@@ -75,15 +76,15 @@ class DataLoader:
         - A NumPy array of simulated fractional Brownian motion paths, shape (n, n_points)
         - A NumPy array of time steps
         """
-        f = FBM(n=n_points-1, hurst=hurst, length=T, method="daviesharte")
+        f = FBM(n=n_points - 1, hurst=hurst, length=T, method="daviesharte")
         W = np.array([f.fbm() for _ in range(n)])
         t = f.times()
 
         return W, t
 
     def simulate_geometric_brownian_motion(
-            self, S0: float, mu: float, sigma: float, T: float, n_points: float, n: int
-            ):
+        self, S0: float, mu: float, sigma: float, T: float, n_points: float, n: int
+    ):
         """
         Simulate n paths of the Black-Scholes process, each starting at S0.
 
@@ -99,18 +100,18 @@ class DataLoader:
         - A NumPy array of simulated stock prices, shape (n, n_points)
         - A NumPy array of time steps
         """
-
         W, t = self.simulate_brownian_motion(T=T, n_points=n_points, n=n)
 
         # Calculate paths
-        X = (mu - 0.5*sigma**2) * t + sigma * W
+        X = (mu - 0.5 * sigma**2) * t + sigma * W
         S = S0 * np.exp(X)  # geometric brownian motion paths
 
         return S, t
     
     def simulate_kou_jump_diffusion(
-            self, S0: float, mu: float, sigma: float, lambda_: float, p: float, eta1: float, eta2: float, 
-            T: float, n_points: float, n: int):
+        self, S0: float, mu: float, sigma: float, lambda_: float, p: float, eta1: float, eta2: float, 
+        T: float, n_points: float, n: int
+    ):
         """
         Simulate n paths of the Kou jump-diffusion process, each starting at S0.
 
@@ -136,16 +137,16 @@ class DataLoader:
         dv = np.ones((n, len(t)))
         # increments of Poisson process
         dt = T / (n_points - 1)
-        dN = np.random.poisson(lambda_*dt, size=(n, len(t)-1))
+        dN = np.random.poisson(lambda_ * dt, size=(n, len(t) - 1))
         # TODO: (optional) Make this computation more efficient
         for i in range(n):
             for j in range(1, len(t)):
                 # iterate through number of jumps
                 # vi contains all jumps that happen in one increment
-                vi = np.ones(dN[i, j-1])
-                for k in range(dN[i, j-1]):
+                vi = np.ones(dN[i, j - 1])
+                for k in range(dN[i, j - 1]):
                     # loop over all jumps in one time step
-                    gamma = np.random.exponential(1/eta1) if np.random.rand() < p else -np.random.exponential(1/eta2)
+                    gamma = np.random.exponential(1 / eta1) if np.random.rand() < p else -np.random.exponential(1 / eta2)
                     vi[k] = np.exp(gamma)
                 # accumulate all jumps which happen in one timestep (1 if empty)
                 dv[i, j] = np.prod(vi)
@@ -153,7 +154,9 @@ class DataLoader:
         S = gbm * np.cumprod(dv, axis=1) 
         return S, t
     
-    def get_yfinance_data(self, S0: float=1., ticker="^GSPC", start=None, end="2024-06-30", n_points: int=22, split=False):
+    def get_yfinance_data(
+        self, S0: float = 1., ticker="^GSPC", start=None, end="2024-06-30", n_points: int = 22, split=False
+    ):
         """
         Download and reformat yfinance data starting at S0.
 
@@ -168,29 +171,29 @@ class DataLoader:
         raw_data = yf.download(tickers=ticker, start=start, end=end, progress=False)["Adj Close"]
         S = np.array(raw_data)
 
-        # if splt is True, split the data into chunks of length n_points:
+        # if split is True, split the data into chunks of length n_points:
         if split:
             returns = S[1:] / S[:-1]
-            n = returns.shape[0] // (n_points-1)
-            # split such that some data in beginning of the time series is lost (returns.shape[0] % (n_points-1) / (n_points-1))
-            n_returns = n * (n_points-1)
+            n = returns.shape[0] // (n_points - 1)
+            # split such that some data in beginning of the time series is lost (returns.shape[0] % (n_points - 1) / (n_points - 1))
+            n_returns = n * (n_points - 1)
             returns = returns[-n_returns:]
-            returns = returns.reshape(n, n_points-1)
+            returns = returns.reshape(n, n_points - 1)
             # t is the annualized time between each return
             t_raw = np.array((raw_data.index[1:] - raw_data.index[0]).days)[-n_returns:]
-            t_raw = t_raw.reshape(n, n_points-1)
+            t_raw = t_raw.reshape(n, n_points - 1)
             t = np.zeros((n, n_points))
-            t[1:, 0] = t_raw[:-1,-1]
-            t[:,1:] = t_raw - t[:, 0].reshape(-1, 1)
+            t[1:, 0] = t_raw[:-1, -1]
+            t[:, 1:] = t_raw - t[:, 0].reshape(-1, 1)
             t[:, 0] = 0
             t = t / 365.25  # convert days to years    
             S = np.zeros((n, n_points))
             S[:, 0] = S0
             S[:, 1:] = np.cumprod(returns, axis=1)
         else:
-            S = S.reshape(1,-1)
+            S = S.reshape(1, -1)
             if S0 is not None:
-                S = S / S[0,0] * S0
+                S = S / S[0, 0] * S0
             t = np.array((raw_data.index - raw_data.index[0]).days)
             t = t / 365.25  # convert days to years
 

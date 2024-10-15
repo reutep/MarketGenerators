@@ -28,7 +28,7 @@ class OptionPricingVisualization:
             self.x_label = "Strike Price (K)"
 
     def set_y_limits_dev_abs(self, nDays, model_folder):
-        # Initialize y_lim dictionary based on nDays and model_folder
+        """Set y-axis limits for absolute deviations."""
         y_lims = {
             'GBM': {
                 5: {'European': 0.0072, 'Asian': 0.0037, 'Lookback': 0.019},
@@ -43,14 +43,13 @@ class OptionPricingVisualization:
                 252: {'European': 0.38, 'Asian': 0.159, 'Lookback': 0.305}
             },
             'YFinance': {
-                5: {'European': 0.073, 'Asian': 0.0038, 'Lookback': 0.0021},#TBD
-                10: {'European': 0.0126, 'Asian': 0.006, 'Lookback': 0.0146},#TBD
-                21: {'European': 0.028, 'Asian': 0.0136, 'Lookback': 0.022},#TBD
-                252: {'European': 0.33, 'Asian': 0.14, 'Lookback': 0.24}#TBD
+                5: {'European': 0.073, 'Asian': 0.0038, 'Lookback': 0.0021},  # TBD
+                10: {'European': 0.0126, 'Asian': 0.006, 'Lookback': 0.0146},  # TBD
+                21: {'European': 0.028, 'Asian': 0.0136, 'Lookback': 0.022},  # TBD
+                252: {'European': 0.33, 'Asian': 0.14, 'Lookback': 0.24}  # TBD
             }
         }
 
-        # Check if the given model_folder, nDays, and self.pe.type are valid
         if model_folder not in y_lims:
             raise ValueError(f"Unsupported model_folder: {model_folder}")
         
@@ -60,13 +59,12 @@ class OptionPricingVisualization:
         if self.pe.type not in y_lims[model_folder][nDays]:
             raise ValueError(f"Unsupported option type: {self.pe.type}")
 
-        # Determine upper limit based on model_folder, option type, and nDays
         upper_limit = y_lims[model_folder][nDays][self.pe.type]
         
         return (0, upper_limit)
 
     def plot_option_prices(self, close=False, label="DUMMY_MODEL"):
-        # initialize plots
+        """Plot option prices."""
         if self.figCall is None and self.axCall is None:
             self.figCall, self.axCall = plt.subplots(figsize=(10, 6))
             self.axCall.set_xlabel(self.x_label)
@@ -91,31 +89,31 @@ class OptionPricingVisualization:
                 self.axPut.set_prop_cycle(cycler(color=shifted_color_cycle))
             self.axPut.plot(self.x_values, self.pe.mc_put_ground_prices, ':', label='Input Data')
         
-        # add Monte Carlo generated prices 
         self.axCall.plot(self.x_values, self.pe.mc_call_gen_prices, label=label)
         self.axPut.plot(self.x_values, self.pe.mc_put_gen_prices, label=label)
 
-        # Finalize plots
         if close:
             self.axCall.legend()
             self.axPut.legend()
             if self.file_name is not None:
-                self.figCall.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_prices_{self.file_name}")
-                self.figPut.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_prices_{self.file_name}")
+                self.figCall.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_prices_{self.file_name}"
+                )
+                self.figPut.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_prices_{self.file_name}"
+                )
             self.figCall.show()
             self.figPut.show()
             plt.close(self.figCall)
             plt.close(self.figPut)
-            # reset the figure and axis
             self.figPut, self.axPut, self.figCall, self.axCall = None, None, None, None
         return
 
     def plot_option_price_deviation(self, close=False, label="DUMMY_MODEL", zoom_ylimits=None):
-        # initialize plots
+        """Plot option price deviations."""
         relevant_col_cycle = double_shifted_color_cycle if self.pe.input_is_real_data else shifted_color_cycle
         if self.figCallDev is None and self.axCallDev is None:
             self.figCallDev, self.axCallDev = plt.subplots(figsize=(10, 6))
-            # shift the color cycle by one to match the price plot colors
             self.axCallDev.set_prop_cycle(cycler(color=relevant_col_cycle))
             self.axCallDev.set_xlabel(self.x_label)
             self.axCallDev.set_ylabel(f'Dev. from {self.exact_label}Price')
@@ -127,7 +125,6 @@ class OptionPricingVisualization:
 
         if self.figPutDev is None and self.axPutDev is None:
             self.figPutDev, self.axPutDev = plt.subplots(figsize=(10, 6))
-            # shift the color cycle by one to match the price plot colors
             self.axPutDev.set_prop_cycle(cycler(color=relevant_col_cycle))
             self.axPutDev.set_xlabel(self.x_label)
             self.axPutDev.set_ylabel(f'Dev. from {self.exact_label}Price')
@@ -137,31 +134,31 @@ class OptionPricingVisualization:
             if not self.pe.input_is_real_data:
                 self.axPutDev.plot(self.x_values, self.pe.ground_put_deviations, ':' ,label='Input Data')
         
-        # add Monte Carlo generated prices 
         self.axCallDev.plot(self.x_values, self.pe.gen_call_deviations, label=label)
         self.axPutDev.plot(self.x_values, self.pe.gen_put_deviations, label=label)
 
-        # Finalize plots
         if close:
             self.axCallDev.legend()
             self.axPutDev.legend()
             if self.file_name is not None:
-                self.figCallDev.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_{self.file_name}")
-                self.figPutDev.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_{self.file_name}")
+                self.figCallDev.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_{self.file_name}"
+                )
+                self.figPutDev.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_{self.file_name}"
+                )
             self.figCallDev.show()
             self.figPutDev.show()
             plt.close(self.figCallDev)
             plt.close(self.figPutDev)
-            # reset the figure and axis
             self.figCallDev, self.axCallDev, self.figPutDev, self.axPutDev = None, None, None, None
         return
     
     def plot_option_price_deviation_relative(self, close=False, label="DUMMY_MODEL", zoom_ylimits=None):
-        # initialize plots
+        """Plot relative option price deviations."""
         relevant_col_cycle = double_shifted_color_cycle if self.pe.input_is_real_data else shifted_color_cycle
         if self.figCallDevRel is None and self.axCallDevRel is None:
             self.figCallDevRel, self.axCallDevRel = plt.subplots(figsize=(10, 6))
-            # shift the color cycle by one to match the price plot colors
             self.axCallDevRel.set_prop_cycle(cycler(color=relevant_col_cycle))
             self.axCallDevRel.set_xlabel(self.x_label)
             self.axCallDevRel.set_ylabel(f'Rel. Dev. from {self.exact_label}Price (%)')
@@ -172,7 +169,6 @@ class OptionPricingVisualization:
 
         if self.figPutDevRel is None and self.axPutDevRel is None:
             self.figPutDevRel, self.axPutDevRel = plt.subplots(figsize=(10, 6))
-            # shift the color cycle by one to match the price plot colors
             self.axPutDevRel.set_prop_cycle(cycler(color=relevant_col_cycle))
             self.axPutDevRel.set_xlabel(self.x_label)
             self.axPutDevRel.set_ylabel(f'Rel. Dev. from {self.exact_label}Price (%)')
@@ -181,38 +177,43 @@ class OptionPricingVisualization:
             if not self.pe.input_is_real_data:
                 self.axPutDevRel.plot(self.x_values, self.pe.ground_put_deviations_rel, ':' ,label='Input Data')
         
-        # add Monte Carlo generated prices 
         self.axCallDevRel.plot(self.x_values, self.pe.gen_call_deviations_rel, label=label)
         self.axPutDevRel.plot(self.x_values, self.pe.gen_put_deviations_rel, label=label)
 
-        # Finalize plots
         if close:
             self.axCallDevRel.legend()
             self.axPutDevRel.legend()
             if self.file_name is not None:
-                self.figCallDevRel.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_rel_{self.file_name}")
-                self.figPutDevRel.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_rel_{self.file_name}")
+                self.figCallDevRel.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_rel_{self.file_name}"
+                )
+                self.figPutDevRel.savefig(
+                    f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_rel_{self.file_name}"
+                )
             self.figCallDevRel.show()
             self.figPutDevRel.show()
             if zoom_ylimits is not None:
                 self.axCallDevRel.set_ylim(zoom_ylimits)
                 self.axPutDevRel.set_ylim(zoom_ylimits)
                 if self.file_name is not None:
-                    self.figCallDevRel.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_rel_zoom_{self.file_name}")
-                    self.figPutDevRel.savefig(f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_rel_zoom_{self.file_name}")
+                    self.figCallDevRel.savefig(
+                        f"{plotDirName}/{self.title_prefix.strip().lower()}_call_option_dev_rel_zoom_{self.file_name}"
+                    )
+                    self.figPutDevRel.savefig(
+                        f"{plotDirName}/{self.title_prefix.strip().lower()}_put_option_dev_rel_zoom_{self.file_name}"
+                    )
                 self.figCallDevRel.show()
                 self.figPutDevRel.show()
             plt.close(self.figCallDevRel)
             plt.close(self.figPutDevRel)
-            # reset the figure and axis
             self.figCallDevRel, self.axCallDevRel, self.figPutDevRel, self.axPutDevRel = None, None, None, None
         return
- 
+
 def option_csv_plotting(df, strike, option_type, price_label, file_name, bar_width=0.25, ylim=None):
+    """Plot option data from CSV."""
     settings = ['European', 'Asian', 'Lookback']
     default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']  # Default Matplotlib colors
 
-    # Remove RCWGAN model
     df = df[df['Model'] != 'RCWGAN']
 
     european_df = df[(df['Setting'] == f"European_K={strike}")]
@@ -231,11 +232,11 @@ def option_csv_plotting(df, strike, option_type, price_label, file_name, bar_wid
         setting_df = filtered_df[filtered_df['Setting'].str.contains(setting)]
         ax.bar(
             positions[i], 
-            setting_df['AverageDev']/setting_df['TruePrice']*100, 
+            setting_df['AverageDev'] / setting_df['TruePrice'] * 100, 
             bar_width,
             color=color, 
             label=f"{setting} {option_type.capitalize()}", 
-            yerr=setting_df['StdDev']/setting_df['TruePrice']*100, 
+            yerr=setting_df['StdDev'] / setting_df['TruePrice'] * 100, 
             capsize=5
         )
 
