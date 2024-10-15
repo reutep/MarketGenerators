@@ -78,9 +78,10 @@ def fill_results(
 
 def save_stat_analysis_to_csv(
     settings, results, lookback_engine, european_engine, asian_engine, relevant_dir, 
-    target_subfolders, nDays, type_option="call"
+    target_subfolders, nDays, type_option="call", one_time_trained=False
 ):
     """Save statistical analysis to CSV."""
+    columns = ['Setting', 'Model', 'AverageDev', 'StdDev', 'TruePrice']
     summary_data = []
     for i, setting in enumerate(settings):
         if setting.startswith("Lookback"):
@@ -97,6 +98,10 @@ def save_stat_analysis_to_csv(
             true_price = mc_ground_prices[i % len(european_engine.K_values)]
             summary_data.append([setting, gan_model, average_dev, std_dev, true_price])
     
-    columns = ['Setting', 'Model', 'AverageDev', 'StdDev', 'TruePrice']
     summary_df = pd.DataFrame(summary_data, columns=columns)
-    summary_df.to_csv(f"{relevant_dir}/retrained_model_summary_{type_option}_NDays={nDays}.csv", index=False)
+    if one_time_trained:
+        summary_df.to_csv(f"{relevant_dir}/summary_{type_option}_NDays={nDays}.csv", index=False)
+    else:
+        summary_df.to_csv(f"{relevant_dir}/retrained_model_summary_{type_option}_NDays={nDays}.csv", index=False)
+    
+    return
