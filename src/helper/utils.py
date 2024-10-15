@@ -132,7 +132,7 @@ def save_stat_analysis_to_csv(
             all_devs = np.array(results[setting][gan_model])
             average_dev = np.mean(all_devs)
             std_dev = np.std(all_devs)
-            mc_ground_prices = getattr(current_engine, f"mc_{type_option}_ground_prices")()
+            mc_ground_prices = getattr(current_engine, f"mc_{type_option}_ground_prices")
             true_price = mc_ground_prices[i % len(european_engine.K_values)]
             summary_data.append([setting, gan_model, average_dev, std_dev, true_price])
     
