@@ -7,3 +7,4 @@ plots/
 buehler_output/
 *.xlsx
 .credentials
+histograms/

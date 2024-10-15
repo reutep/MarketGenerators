@@ -1,0 +1,14 @@
+numpy
+pandas
+matplotlib
+esig
+scikit-learn
+ipykernel
+ipywidgets
+tqdm # for progress bars
+# datasets # Bühler et al. uses this
+pandas_datareader # for downloading data
+tensorflow==1.15
+protobuf #==3.20.1  for tensorflow
+yfinance==0.1.63 # yahoo finance data
+fbm # for fractional Brownian motion
